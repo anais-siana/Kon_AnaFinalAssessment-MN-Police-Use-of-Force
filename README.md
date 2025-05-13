@@ -6,6 +6,9 @@ This is conducted by R and uses a Quarto document.
 
 ## Data Source 
 From the Minneapolis Police Department
-[MN Police Use of Force – Open Data Minneapolis](https://opendata.minneapolismn.gov/datasets/police-use-of-force)
+[MN Police Use of Force – Open Data Minneapolis]https://www.openintro.org/data/index.php?data=mn_police_use_of_force
 
-#### *Uses tidyverse, knitr, and janitor packages in Rstudio* 
+## To Replicate
+1. Clone the repository.
+2. Open `.Rproj` in RStudio.
+3. Render `.qmd`. Just know it uses the tidyverse, knitr, and janitor packages.
