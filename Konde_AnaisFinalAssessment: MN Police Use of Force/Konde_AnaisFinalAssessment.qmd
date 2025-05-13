@@ -1,0 +1,314 @@
+---
+title: "Minneapolis Police Use of Force: An Analysis"
+author: "Anaïs Konde"
+format:
+  html:
+    self-contained: true
+editor: visual
+---
+
+## Introduction
+
+This analysis focuses in on the police usage of force incidents in Minneapolis, Minnesota. The data is publicly available from *Open Data Minneapolis* of the Minneapolis Police Department via OpenIntro. Policing practices in the city of Minneapolis has been a topic of discussion for many years. The 2016 fatal traffic stop killing of Philando Castille, a 32-year old black man, sparked nationwide outrage after the event was livestreamed (Chappell 2016). Notably in 2020, George Floyd, a 46-year old black man, repeatedly told officers he could not breathe as he was knelt down on to death (Collins 2023). This would not only spark mass protest in the Minneapolis and St.Paul area but it would evoke global unrest about the state of policing. Before and after these events, the use of force and policing practices have become central topics of public policy discussion.
+
+The purpose of this analysis is to explore the patterns in the usage of force by the police. The key variables include aspects such as the race of the individuals involved, what type of force was used, and the precinct or neighborhood where such an incident took place. By identifying the trends or disparities with the given outcome, it can gave insights to inform future policy decisions or general research on law enforcement practices.
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(knitr)
+
+mnpd_force <- read.csv("mn_police_use_of_force.csv")|> 
+  clean_names()
+
+```
+
+## Data Description
+
+```{r}
+# Glimpse Table
+suppressWarnings(knitr::kable(head(mnpd_force), caption = "Glimpse of Data"))
+```
+
+As previously stated from the introduction, the dataset that is used is collected from the Minneapolis Police department via OpenIntro. It documents the police use of force data from 2016 through August 2021 in the city of Minneapolis. This type of data can be useful for discussions about public safety policies and racial disparities.
+
+**Source**: Minneapolis Police Department *Open Data Minneapolis* via OpenIntro
+
+**Dataset**: mn_police_use_of_force
+
+**URL**: https://www.openintro.org/data/index.php?data=mn_police_use_of_force
+
+**Subject/Topics Covered**: Incidents of Minneapolis police officers apply force during interactions with the public. The data includes mainly demographic information about the people involved in the altercation. It also includes the type of force used, location where the altercation took place, and if the incident came from a 911 call.
+
+**Unit of Observation**:Each observation row represents a single police use of force incident.
+
+**Number of Observations**: There are 12,925 observations.
+
+**Number of Variables**: There are 13 variables.
+
+## Key Variables
+
+```{r}
+colnames(mnpd_force)
+```
+
+1.  **`race`** – *Race of the subject involved in the incident*\
+    This variable is important for assessing potential racial disparities in police use of force.
+
+2.  **`force_type_action`** – *Type of force applied by officers*\
+    This variable describes the specific type of force used (bodily force, chemical irritant,gun point display, etc) thus providing insights into the severity of incidents.
+
+3.  **`subject_injury`** – *Whether the subject was injured during the incident*\
+    This variable is crucial for evaluating the human impact of police interactions.
+
+4.  **`year`** – *Year in which the incident occurred*\
+    This variable allows for the analysis of trends over time.
+
+### Missing Data
+
+```{r}
+mnpd_force <- mnpd_force %>% 
+  mutate(year = lubridate::year(response_datetime))
+
+mnpd_force %>% 
+  summarize(
+    na_race = sum(is.na(race) | race == ""),
+    na_forcetype = sum(is.na(force_type_action) | force_type_action == ""),
+    na_injury = sum(is.na(subject_injury) | subject_injury == ""),
+    na_problem = sum(is.na(problem) | problem == ""),
+    na_year = sum(is.na(year))
+  ) %>% 
+ suppressWarnings(knitr::kable(caption = "Missing Data in Key Variables"))
+```
+
+Some of the selected key variables have missing values. **`subject_injury`** has over 9848 missing values. **`race`** has over 1024 missing values. It can influence the conclusions about the usage of force. Overall, the chosen dataset is already relatively cleaned. Unfortunately, there are no descriptions, demographics, or characteristics of the officers included in the dataset. The analysis in limited in this capacity.
+
+## Summary Statistics and Visualizations
+
+### [Race]{.underline}
+
+#### Frequency Table
+
+```{r}
+
+race_table <- table(mnpd_force$race)
+
+race_percent <- prop.table(race_table) * 100
+
+race_frequency <- data.frame(
+  Race = names(race_table),
+  Number_Incidents = as.vector(race_table),
+  Percentage = round(as.vector(race_percent), 2)
+)
+
+suppressWarnings(
+  knitr::kable(race_frequency, caption = "Frequency Table: Incidents by Race")
+)
+
+```
+
+#### Bar Visualization
+
+```{r}
+mnpd_force %>% 
+  ggplot(aes(x = fct_infreq(race))) +
+  geom_bar(fill = "slateblue1", color = "darkred") +
+  theme_minimal() +
+  labs(
+    title = "Bar Plot:Incidents by Race",
+    x = "Race",
+    y = "Number of Incidents"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 65, hjust = 1)
+  )
+```
+
+#### Race Insights
+
+According to the table and bar plot black residents of Minneapolis make up 64.29% of the use-of-force incidents by police compared to their racial counterparts. This is an overwhelming majority. According to the US Census(2025), only about 18.3% of the population of Minneapolis is black while 61.6% of the population is white. This can be useful for policy making about racial biases in policing.
+
+### [Time]{.underline}
+
+#### Frequency Table
+
+```{r}
+
+time_table <- table(mnpd_force$year)
+
+time_percent <- prop.table(time_table) * 100
+
+time_summary <- data.frame(
+  Year = names(time_table),
+  Number_Incidents = as.vector(time_table),
+  Percentage = round(as.vector(time_percent), 2)
+)
+
+suppressWarnings(
+  knitr::kable(time_summary, caption = "Frequency Table: Incidents Over Time")
+)
+```
+
+#### Time-Series/Line Graph Visualization
+
+```{r}
+library(hrbrthemes)
+
+mnpd_force %>%
+  count(year, name = "number_incidents") %>%
+  ggplot(aes(x = year, y = number_incidents)) +
+  geom_line(color = "mediumvioletred") +
+  geom_point() +
+  xlab("Year") +
+  ylab("Number of Incidents") +
+  theme_ipsum() +
+  theme(
+    axis.text.x = element_text(angle = 60, hjust = 1),
+    plot.title = element_text()
+  ) +
+  labs(title = "Incidents Over Time")
+```
+
+#### Over Time Insights
+
+Even as this is a shorter time frame, the use of force incidents by police show a clear fluctuation in the years analyzed. 2020 was the peak point in this time frame. This was the same year of the George Floyd murder which lead to many public protests. Given the scrutiny of policing practices and public outcry, it is likely that tensions intensified between law enforcement and the public. For example, during this year.
+
+In 2021, the number of incidents by force takes a subtle decline. It is possible this can be attributed to early policy reforms on policing following mass public outcry and pressure. The Minnesota Legislature had enacted new standards for governing police use of deadly force (Orenstein 2021). In 2021, the Mayor of Minneapolis, Jacob Frey, pushed to reform the Minneapolis Police Department through different initiatives that would change the state of policing practices (Dernbach 2021).
+
+Before 2020, the years remained relatively stable with some slight variation. 2016 was the year that Philando Castille was murdered by police and that event also caused public backlash.Social trends and policy contexts can play a role in seeing the trends of police behavior over time in the city.
+
+### [Force Type]{.underline}
+
+#### Frequency Table
+
+```{r}
+
+mnpd_force <- mnpd_force %>%
+  mutate(force_type_action = tolower(trimws(force_type_action)),
+         force_type_action = case_when(
+           force_type_action %in% c("punch", "punches") ~ "punch",
+           force_type_action %in% c("knee", "knees") ~ "knee",
+           force_type_action %in% c("slap", "slaps") ~ "slap",
+           force_type_action %in% c("firearm as striking tool", "firearms as striking tool") ~ "firearm as striking tool",
+           force_type_action %in% c("body weight pin", "body weight to pin") ~ "body weight to pin",
+           force_type_action %in% c("conscious neck restraint", "neck restraint: subject did not lose conciousness") ~ "conscious neck restraint",
+           force_type_action %in% c("crowd control mace", "crowd control techniques") ~ "crowd control tactics",
+           force_type_action %in% c("neck restraint: subject lost conciousness", "unconscious neck restraint") ~ "unconscious neck restraint",
+           TRUE ~ force_type_action
+         ),
+         force_type_action = tools::toTitleCase(force_type_action))
+
+force_table <- table(mnpd_force$force_type_action)
+
+force_percent <- prop.table(force_table) * 100
+
+force_summary <- data.frame(
+  Force_Type = names(force_table),
+  Number_Incidents = as.vector(force_table),
+  Percentage = round(as.vector(force_percent), 2)
+)
+
+force_summary <- force_summary %>%
+  arrange(desc(Number_Incidents))
+
+suppressWarnings(
+  knitr::kable(
+    force_summary,
+    caption = "Frequency Table: Force Type"
+  )
+)
+```
+
+#### Bar Visualization
+
+```{r}
+
+mnpd_force %>%
+  count(force_type_action, name = "number_incidents") %>%
+  filter(number_incidents > 50) %>%
+  ggplot(aes(x = fct_reorder(force_type_action, number_incidents), y = number_incidents)) +
+  geom_bar(stat = "identity", fill = "blueviolet", color = "darkmagenta") +
+  coord_flip() +
+  theme_minimal() +
+  labs(
+    title = "Bar Plot: Force Types",
+    x = "Type of Force",
+    y = "Number of Incidents"
+  )
+
+```
+
+#### Force Type Insights
+
+The overwhelming majority of use of force type is body force, mainly body weight to pin, take-downs, and joint locking. This is the same technique that killed George Floyd. Though seen as a less lethal use of force, it has still lead to notable killings. In 2014, Eric Garner was also killed by such a physical technique in New York (NAACP 2018). Neck restraints also appear in the data.
+
+There are other notable force measures that are being used. Personal mace, chemical irritants, firing darts are some of the notable uses of forces that are not just the physical body.
+
+Types physical restraint techniques appear to be the most common use of force by police officers. These methods draw concern to the public and can suggest policy change on the types of force being employed.
+
+### [Subject Injury]{.underline}
+
+#### Frequency Table
+
+```{r}
+
+injury_table <- table(ifelse(trimws(mnpd_force$subject_injury) == "", "Unknown", mnpd_force$subject_injury))
+
+injury_percent <- prop.table(injury_table) * 100
+
+injury_summary <- data.frame(
+  Subject_Injury = names(injury_table),
+  Number_Incidents = as.vector(injury_table),
+  Percentage = round(as.vector(injury_percent), 2)
+)
+
+suppressWarnings(
+  knitr::kable(
+    injury_summary,
+    caption = "Frequency Table: Subject Injuries"
+  )
+)
+```
+
+#### Bar Visualization
+
+```{r}
+mnpd_force %>%
+  filter(subject_injury != "") %>%
+  count(subject_injury, name = "number_incidents") %>%
+  ggplot(aes(x = fct_reorder(subject_injury, number_incidents), y = number_incidents)) +
+  geom_bar(stat = "identity", fill = "lightslateblue", color = "darkslateblue") +
+  coord_flip() +
+  theme_minimal() +
+  labs(
+    title = "Bar Plot: Subject Injuries (Known)",
+    x = "Subject Injury Known Outcome",
+    y = "Number of Incidents"
+  )
+```
+
+#### Subject Injury Insights
+
+The frequency table shows that a significant portion of use of force incidences do not end up getting reported often. Of the **`subject_injury`** data collected, over 76.2% are not reported. This highlight the potential gaps in data collection and reporting. A gap such as this makes it hard to fully assess the consequences for substantial use of force by police thus further highlighting better data collection practices in law enforcement.
+
+Of the known injury outcomes presented in the bar graph, a slight majority did result in injury. This suggests that when force is applied and subject injury is recorded, physical harm is a frequent outcome. But, improving the accuracy of injury documentation is crucial for fully understanding the outcomes of police use of force incidents.
+
+## Conclusion
+
+There are many critical data points that are highlighted in this about the use of force by the Minneapolis Police Department. The majority of the incidents involve black individuals which raise concern about racial biases and disparities when it comes to policing. Different forms of physical body restraint is the main force type used against individuals by police. Other high-risk tactics are used in the many of the cases noted such as firing darts. When injury is reported, the likely outcome results in physical harm to the individual by the police use of force. Unfortunately, an overwhelming majority of subject injury outcomes are unknown. These findings leave room for further analysis to see the relationship between specific force types, injuries, and demographics. Policymakers and law enforcment should take these patterns into consideration when choosing strategies for public harm reduction and better policing practices.
+
+## Citations
+
+Chappell, Bill, and Camila Domonoske. “Police Stop Ends in Black Man’s Death; Aftermath Is Live-Streamed Online Video.” *NPR*, July 7, 2016. <https://www.npr.org/sections/thetwo-way/2016/07/07/485066807/police-stop-ends-in-black-mans-death-aftermath-is-livestreamed-online-video>.
+
+Collins, Jon. “How Minneapolis Has Changed Three Years After the Murder of George Floyd.” *Minnesota Public Radio News*, May 24, 2023. <https://www.mprnews.org/story/2023/05/24/how-minneapolis-has-changed-three-years-after-the-murder-of-george-floyd>.
+
+Dernbach, Becky Z. *Mayor Jacob Frey Says He’s Overhauling the Minneapolis Police Department. We Asked Him to Tell Us How.* Sahan Journal, May 3, 2021. <https://sahanjournal.com/public-safety/minneapolis-mayor-frey-police-reform/>.
+
+NAACP. *Justice for Eric Garner and the Urgent Need for Police Accountability.* NAACP, 2018. <https://naacp.org/resources/justice-eric-garner-and-urgent-need-police-accountability>.
+
+Orenstein, Walker. *The Minnesota Legislature Passed New Deadly Force Standards for Police in 2020. Why Lawmakers Are Already Looking to Change Them.* MinnPost, April 20, 2021. <https://www.minnpost.com/state-government/2021/04/the-minnesota-legislature-passed-new-deadly-force-standards-for-police-in-2020-why-lawmakers-are-already-looking-to-change-them/>.
+
+OpenIntro. *Minneapolis Police Use of Force Data.* Accessed May 12, 2025. <https://www.openintro.org/data/index.php?data=mn_police_use_of_force>.
+
+U.S. Census Bureau. *Minneapolis city, Minnesota.* QuickFacts. Last modified May 7, 2025. <https://www.census.gov/quickfacts/fact/table/minneapoliscityminnesota/PST045224>
